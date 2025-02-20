@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dynamic Form Generator</title>
+  <link href="/src/index.css" rel="stylesheet">
+</head>
+<body class="min-h-screen bg-base-200">
+  <div x-data="formApp" class="container mx-auto p-6">
+    <div x-show="!formLoaded" class="text-center">
+      <h1 class="text-2xl font-bold mb-4">Loading Form...</h1>
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+
+    <form 
+      x-show="formLoaded" 
+      @submit.prevent="submitForm" 
+      class="card bg-base-100 shadow-xl p-6 max-w-md mx-auto"
+    >
+      <h2 x-text="formSchema.title" class="text-2xl font-bold mb-4"></h2>
+      
+      <template x-for="(field, key) in formSchema.properties" :key="key">
+        <div class="form-control w-full mb-4">
+          <label class="label">
+            <span x-text="field.title" class="label-text"></span>
+          </label>
+          
+          <input 
+            :type="field.type === 'string' ? 'text' : 
+                   field.type === 'number' ? 'number' : 
+                   field.type === 'boolean' ? 'checkbox' : 'text'"
+            :name="key"
+            x-model="formData[key]"
+            class="input input-bordered w-full"
+            :required="formSchema.required && formSchema.required.includes(key)"
+          >
+          
+          <p x-show="field.description" x-text="field.description" class="text-sm text-gray-500 mt-1"></p>
+        </div>
+      </template>
+
+      <button type="submit" class="btn btn-primary w-full mt-4">Submit</button>
+    </form>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
