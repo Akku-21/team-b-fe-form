@@ -1,5 +1,7 @@
 import Alpine from 'alpinejs';
 import confetti from 'canvas-confetti';
+import { apiClient } from './services/apiClient';
+import type * as types from './types/openapi';
 
 window.Alpine = Alpine;
 
@@ -14,16 +16,24 @@ Alpine.data('formApp', () => ({
     this.uuid = window.location.pathname.split('/').pop();
     
     try {
-      // Fetch form schema from backend
-      const response = await fetch(`/api/form-schema/${this.uuid}`);
-      this.formSchema = await response.json();
-      
-      // Initialize form data based on schema
-      Object.keys(this.formSchema.properties).forEach(key => {
-        this.formData[key] = null;
+      // Fetch form schema from backend using apiClient
+      const response = await apiClient.paths['/api/validate/{uuid}'].get({
+        path: { uuid: this.uuid }
       });
       
-      this.formLoaded = true;
+      if (response.status === 200) {
+        this.formSchema = response.data.jsonSchema;
+        
+        // Initialize form data based on schema
+        Object.keys(this.formSchema.properties).forEach(key => {
+          this.formData[key] = null;
+        });
+        
+        this.formLoaded = true;
+      } else {
+        console.error('Failed to validate UUID:', response.data.message);
+        alert('Failed to load form. Please try again later.');
+      }
     } catch (error) {
       console.error('Failed to load form schema:', error);
       alert('Failed to load form. Please try again later.');
@@ -32,15 +42,15 @@ Alpine.data('formApp', () => ({
 
   async submitForm() {
     try {
-      const response = await fetch(`/api/submit-form/${this.uuid}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(this.formData)
+      const response = await apiClient.paths['/api/create'].post({
+        requestBody: {
+          uuid: this.uuid,
+          jsonSchema: this.formSchema,
+          expiresAt: new Date().toISOString() // Set a future expiration date
+        }
       });
 
-      if (response.ok) {
+      if (response.status === 201) {
         // Trigger confetti on successful submission
         confetti({
           particleCount: 100,
@@ -50,8 +60,8 @@ Alpine.data('formApp', () => ({
 
         alert('Form submitted successfully!');
       } else {
-        const errorData = await response.json();
-        alert(`Submission failed: ${errorData.message}`);
+        console.error('Form submission error:', response.data);
+        alert('Failed to submit form. Please try again.');
       }
     } catch (error) {
       console.error('Form submission error:', error);
